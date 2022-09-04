@@ -4,6 +4,7 @@
 #include <QMainWindow>
 
 #include "qcustomplot.h"
+#include <QDebug>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -17,20 +18,24 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
-    // 绘制波形图
-    void PlotInit();
+    void PlotInit();  // 所有波形图初始化
 
 private:
     Ui::MainWindow *ui;
     QTimer* timer;
 
-    QVector<double> xTime;  // x时间轴
+    QVector<double> xCH4;  // x时间轴
     QVector<double> yCH4;  // 气体浓度信息
+
+    void GraphInit(QCustomPlot*, QSharedPointer<QCPAxisTickerTime>&);  // 单个波形图初始化
 
 
 // 槽函数
 private slots:
-    void PlotUpdate();
-    void InfoUpdate();
+    void PlotUpdate();  // 波形图更新
+    void InfoUpdate();  // 传感器信息更新
+    void on_pushButton_clicked();
+    void on_pushButton_2_clicked();
+
 };
 #endif // MAINWINDOW_H
