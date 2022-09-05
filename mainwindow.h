@@ -28,14 +28,16 @@ private:
     QVector<double> yCH4;  // 气体浓度信息
 
     void GraphInit(QCustomPlot*, QSharedPointer<QCPAxisTickerTime>&);  // 单个波形图初始化
+    void WidgetInit();
 
 
 // 槽函数
 private slots:
     void PlotUpdate();  // 波形图更新
     void InfoUpdate();  // 传感器信息更新
-    void on_pushButton_clicked();
-    void on_pushButton_2_clicked();
+//    void on_pushButton_clicked();  // 按钮点击事件
+//    void on_pushButton_2_clicked();
+    void SelectPage();  // 按钮点击切换页面
 
 };
 #endif // MAINWINDOW_H

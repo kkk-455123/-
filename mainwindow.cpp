@@ -18,6 +18,13 @@ MainWindow::MainWindow(QWidget *parent)
     connect(timer, SIGNAL(timeout()), this, SLOT(InfoUpdate()));
     timer->start();
 
+    connect(ui->pushButton, &QPushButton::clicked, this, &MainWindow::SelectPage);
+    connect(ui->pushButton_2, &QPushButton::clicked, this, &MainWindow::SelectPage);
+    connect(ui->pushButton_3, &QPushButton::clicked, this, &MainWindow::SelectPage);
+    connect(ui->pushButton_4, &QPushButton::clicked, this, &MainWindow::SelectPage);
+
+    this->WidgetInit();
+
 }
 
 void MainWindow::GraphInit(QCustomPlot* customplot, QSharedPointer<QCPAxisTickerTime>& timeTicker) {
@@ -32,13 +39,13 @@ void MainWindow::GraphInit(QCustomPlot* customplot, QSharedPointer<QCPAxisTicker
 //    ui->widget->xAxis->setRange(0, 10);
     customplot->yAxis->setRange(0, 100);
     // 添加曲线
-    customplot->addGraph(ui->widget->xAxis, ui->widget->yAxis);
+    customplot->addGraph(ui->widget_CH4->xAxis, ui->widget_CH4->yAxis);
     customplot->setInteractions(QCP::iRangeDrag //可平移
                                 | QCP::iRangeZoom //可滚轮缩放
                                 | QCP::iSelectLegend );//可选中图例)
 //    // 设置曲线0数据
 //    ui->widget->graph(0)->setData(xCH4, yCH4);
-    ui->widget->replot();
+    ui->widget_CH4->replot();
 }
 
 void
@@ -48,7 +55,7 @@ MainWindow::PlotInit() {
     dateTicker->setTimeFormat("%h:%m:%s");  // 显示格式 时:分:秒
     dateTicker->setTickCount(20);
 
-    this->GraphInit(ui->widget, dateTicker);
+    this->GraphInit(ui->widget_CH4, dateTicker);
     this->GraphInit(ui->widget_2, dateTicker);
 }
 
@@ -60,7 +67,7 @@ MainWindow::PlotUpdate() {
         ui->progressBar->setValue(value++);
 
     double nowTime = QTime::currentTime().hour()*3600 + QTime::currentTime().minute()*60 + QTime::currentTime().second();
-    ui->widget->xAxis->setRange(nowTime - 10, nowTime);
+    ui->widget_CH4->xAxis->setRange(nowTime - 10, nowTime);
 
     // setdata方式
 //    for (int i = 0; i < 10; i++) {
@@ -74,12 +81,12 @@ MainWindow::PlotUpdate() {
     // adddata方式
     qsrand(QTime(0,0,0).secsTo(QTime::currentTime()));
     int y = qrand()%100;  // qrand生成四位随机数，%10保留个位
-    ui->widget->graph(0)->addData(nowTime, y);
+    ui->widget_CH4->graph(0)->addData(nowTime, y);
 
     // 图一更新
 //    ui->widget->graph(0)->setData(xCH4, yCH4);
 //    ui->widget->graph(0)->addData(nowTime, value);
-    ui->widget->replot();
+    ui->widget_CH4->replot();
 
     // 图二更新
 }
@@ -91,15 +98,49 @@ MainWindow::InfoUpdate() {
     ui->label_3->setText("峰值浓度:" + temp);
 }
 
+//void
+//MainWindow::on_pushButton_clicked() {
+//    ui->frame_5->setVisible(true);
+//    timer->start();
+//}
+
+//void
+//MainWindow::on_pushButton_2_clicked() {
+//    ui->frame_5->setVisible(false);
+//}
+
 void
-MainWindow::on_pushButton_clicked() {
-    ui->frame_5->setVisible(true);
-    timer->start();
+MainWindow::WidgetInit() {
+    int width = this->width();
+    int height = this->height();
+
+    ui->label_title->setBaseSize(width, height*0.2);
+    QSizePolicy sizePolicy = this->sizePolicy();
+//    sizePolicy.setHorizontalPolicy(QSizePolicy::MinimumExpanding);
+//    sizePolicy.setVerticalPolicy(QSizePolicy::Maximum);
+//    ui->label_title->setSizePolicy(sizePolicy);
 }
 
 void
-MainWindow::on_pushButton_2_clicked() {
-    ui->frame_5->setVisible(false);
+MainWindow::SelectPage() {
+    //获取触发槽的是哪个部件所发出的信号，并获取到那个指针
+    QPushButton *widget = static_cast<QPushButton*>(sender());
+    if (widget == ui->pushButton)
+    {
+        ui->stackedWidget->setCurrentIndex(0);//根据触发的按钮来进行所要显示的QWidget
+    }
+    else if (widget == ui->pushButton_2)
+    {
+        ui->stackedWidget->setCurrentIndex(1);
+    }
+    else if (widget == ui->pushButton_3)
+    {
+        ui->stackedWidget->setCurrentIndex(2);
+    }
+    else if (widget == ui->pushButton_4)
+    {
+        ui->stackedWidget->setCurrentIndex(3);
+    }
 }
 
 MainWindow::~MainWindow()

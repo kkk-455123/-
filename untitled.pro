@@ -25,7 +25,8 @@ HEADERS += \
     qcustomplot.h
 
 FORMS += \
-    mainwindow.ui
+    mainwindow.ui \
+    mainwindow_2.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
