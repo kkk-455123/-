@@ -6,8 +6,10 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
     , timer(new QTimer())
     , xCH4(10, 0), yCH4(10, 0)
+    , tcpServer(new QTcpServer(this))
 {
     ui->setupUi(this);
+    ui->stackedWidget->setCurrentIndex(0);  // 首先显示环境监测菜单
 
     // 波形图初始化
     this->PlotInit();
@@ -24,6 +26,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->pushButton_4, &QPushButton::clicked, this, &MainWindow::SelectPage);
 
     this->WidgetInit();
+    this->AlertInit();
 
 }
 
@@ -141,6 +144,33 @@ MainWindow::SelectPage() {
     {
         ui->stackedWidget->setCurrentIndex(3);
     }
+}
+
+void
+MainWindow::AlertInit() {
+    connect(ui->settingButtonUpdateCH4, &QPushButton::clicked, this, [=](){ ui->label_4->setText("报警阈值:" + QString::number(ui->doubleSpinBoxCH4->value(), 'f', 2));});
+}
+
+void
+MainWindow::socketInit() {
+    // 监听
+    if(!tcpServer->listen(QHostAddress::Any, 6665)) {
+        qDebug() << tcpServer->errorString();
+        close();
+    }
+    // 检测新连接
+    connect(tcpServer, &QTcpServer::newConnection, this, &MainWindow::acceptConnection);
+}
+
+void
+MainWindow::acceptConnection() {
+    clientConnection = tcpServer->nextPendingConnection();
+    connect(clientConnection, SIGNAL(readyRead()), this, SLOT(readMessage()));
+}
+
+void
+MainWindow::readMessage() {
+    QString str = clientConnection->readAll(); //或者 char buf[1024]; clientConnection->read(buf,1024);
 }
 
 MainWindow::~MainWindow()
