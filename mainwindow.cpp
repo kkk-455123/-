@@ -9,6 +9,7 @@ MainWindow::MainWindow(QWidget *parent)
     , tcpServer(new QTcpServer(this))
 {
     ui->setupUi(this);
+    this->setWindowTitle("井下定位监测系统");
     ui->stackedWidget->setCurrentIndex(0);  // 首先显示环境监测菜单
 
     // 波形图初始化
@@ -27,28 +28,43 @@ MainWindow::MainWindow(QWidget *parent)
 
     this->WidgetInit();
     this->AlertInit();
+    this->PositionInit();
 
+}
+
+MainWindow::~MainWindow()
+{
+    delete ui;
 }
 
 void MainWindow::GraphInit(QCustomPlot* customplot, QSharedPointer<QCPAxisTickerTime>& timeTicker) {
     customplot->xAxis->setTicker(timeTicker);  // 将x轴设置为时间轴
     customplot->xAxis->setTickLabelRotation(30);  // 时间显示旋转角度
 
-    // 设置样式
     // 坐标轴标签
     customplot->xAxis->setLabel("时间");
-    customplot->yAxis->setLabel("气体浓度");
+    QString yName;
+    if(customplot == ui->widget_CO || customplot == ui->widget_H2S)
+        yName = "浓度(ppm)";
+    else yName = "浓度(%)";
+    customplot->yAxis->setLabel(yName);
     // 坐标轴范围
 //    ui->widget->xAxis->setRange(0, 10);
     customplot->yAxis->setRange(0, 100);
     // 添加曲线
-    customplot->addGraph(ui->widget_CH4->xAxis, ui->widget_CH4->yAxis);
+    customplot->addGraph(customplot->xAxis, customplot->yAxis);
     customplot->setInteractions(QCP::iRangeDrag //可平移
                                 | QCP::iRangeZoom //可滚轮缩放
                                 | QCP::iSelectLegend );//可选中图例)
+
+    // 设置样式
+    QBrush brush(QColor(255, 50, 50, 100));
+    QPen pen(Qt::red);
+    customplot->graph(0)->setPen(pen);  // 设置line颜色
+    customplot->graph(0)->setBrush(brush);  // 设置line下的填充颜色
 //    // 设置曲线0数据
 //    ui->widget->graph(0)->setData(xCH4, yCH4);
-    ui->widget_CH4->replot();
+    customplot->replot();
 }
 
 void
@@ -58,8 +74,29 @@ MainWindow::PlotInit() {
     dateTicker->setTimeFormat("%h:%m:%s");  // 显示格式 时:分:秒
     dateTicker->setTickCount(20);
 
+    // 每个图表中波形图的初始化(暂不包括温湿度)
     this->GraphInit(ui->widget_CH4, dateTicker);
-    this->GraphInit(ui->widget_2, dateTicker);
+    this->GraphInit(ui->widget_H2S, dateTicker);
+    this->GraphInit(ui->widget_CO, dateTicker);
+    this->GraphInit(ui->widget_CO2, dateTicker);
+    this->GraphInit(ui->widget_O2, dateTicker);
+}
+
+void
+MainWindow::Interpolation(QCustomPlot* customplot, double x, double y, int count) {
+    static QPoint newPoint;
+    static QPoint lastPoint(0, 0);
+    newPoint.setX(x);
+    newPoint.setY(y);
+    double dx = (newPoint.x() - lastPoint.x()) / 100.0;
+    double dy = (newPoint.y() - lastPoint.y()) / 100.0;
+    for(int i = 1; i <= count; i++) {
+        double newX = lastPoint.x() + dx * i;
+        double newY = lastPoint.y() + dy * i;
+        customplot->graph(0)->addData(newX, newY);
+    }
+    lastPoint.setX(newPoint.x());
+    lastPoint.setY(newPoint.y());
 }
 
 void
@@ -69,9 +106,11 @@ MainWindow::PlotUpdate() {
     if(value <= 100)
         ui->progressBar->setValue(value++);
 
+    // 当前时间作时间轴变量
     double nowTime = QTime::currentTime().hour()*3600 + QTime::currentTime().minute()*60 + QTime::currentTime().second();
-    ui->widget_CH4->xAxis->setRange(nowTime - 10, nowTime);
 
+    // 甲烷更新
+    ui->widget_CH4->xAxis->setRange(nowTime - 10, nowTime);
     // setdata方式
 //    for (int i = 0; i < 10; i++) {
 //        xCH4[i] = nowTime + i;
@@ -83,15 +122,38 @@ MainWindow::PlotUpdate() {
 
     // adddata方式
     qsrand(QTime(0,0,0).secsTo(QTime::currentTime()));
-    int y = qrand()%100;  // qrand生成四位随机数，%10保留个位
-    ui->widget_CH4->graph(0)->addData(nowTime, y);
-
-    // 图一更新
-//    ui->widget->graph(0)->setData(xCH4, yCH4);
-//    ui->widget->graph(0)->addData(nowTime, value);
+    int yCH4 = qrand() % 10 + 5;  //qrand生成0~10随机数，+5生成5~15随机数
+    ui->widget_CH4->graph(0)->addData(nowTime, yCH4);
     ui->widget_CH4->replot();
 
-    // 图二更新
+    // 硫化氢更新
+    double yH2S = qrand() % 66 *0.1;
+    ui->widget_H2S->xAxis->setRange(nowTime - 10, nowTime);
+    ui->widget_H2S->yAxis->setRange(0, 10);
+    ui->widget_H2S->graph(0)->addData(nowTime, yH2S);
+    ui->widget_H2S->replot();
+
+    // 一氧化碳更新
+    double yCO = qrand() % 24;
+    ui->widget_CO->xAxis->setRange(nowTime - 10, nowTime);
+    ui->widget_CO->yAxis->setRange(0, 100);
+    ui->widget_CO->graph(0)->addData(nowTime, yCO);
+    ui->widget_CO->replot();
+
+    // 二氧化碳更新
+    double yCO2 = qrand() % 5 * 0.1;
+    ui->widget_CO2->xAxis->setRange(nowTime - 10, nowTime);
+    ui->widget_CO2->yAxis->setRange(0, 1);
+    ui->widget_CO2->graph(0)->addData(nowTime, yCO2);
+    ui->widget_CO2->replot();
+
+    // 氧气更新
+    double yO2 = qrand() % 5 + 20;
+    ui->widget_O2->xAxis->setRange(nowTime - 10, nowTime);
+    ui->widget_O2->yAxis->setRange(0, 100);
+    ui->widget_O2->graph(0)->addData(nowTime, yO2);
+    ui->widget_O2->replot();
+
 }
 
 void
@@ -152,29 +214,70 @@ MainWindow::AlertInit() {
 }
 
 void
-MainWindow::socketInit() {
+MainWindow::socketInit(uint port) {
     // 监听
-    if(!tcpServer->listen(QHostAddress::Any, 6665)) {
+    if(!tcpServer->listen(QHostAddress::Any, port)) {
         qDebug() << tcpServer->errorString();
         close();
     }
+    qDebug() << "listen...";
     // 检测新连接
     connect(tcpServer, &QTcpServer::newConnection, this, &MainWindow::acceptConnection);
+    qDebug() << "detect...";
 }
 
 void
 MainWindow::acceptConnection() {
     clientConnection = tcpServer->nextPendingConnection();
     connect(clientConnection, SIGNAL(readyRead()), this, SLOT(readMessage()));
+    qDebug() << "connected";
+    ui->textBrowser_2->setText("设备已连接 开始接收数据：");
 }
 
 void
 MainWindow::readMessage() {
     QString str = clientConnection->readAll(); //或者 char buf[1024]; clientConnection->read(buf,1024);
+    // 数据解析
+    qDebug() << "new message:" + str;
+    ui->textBrowser_2->append("device:" + str);
 }
 
-MainWindow::~MainWindow()
-{
-    delete ui;
+QString
+MainWindow::getLocalIP() {
+    QString IP;
+    QList<QHostAddress> ipAddressesList = QNetworkInterface::allAddresses();
+    for (int i = 0; i < ipAddressesList.size(); ++i)
+    {
+        if (ipAddressesList.at(i) != QHostAddress::LocalHost &&
+        ipAddressesList.at(i).toIPv4Address())
+        {
+            // 如果这个地址不是127.0.0.1，并且是IPv4的地址，就将其赋值给IP，并结束for循环
+            IP = ipAddressesList.at(i).toString();
+            break;
+        }
+    }
+    // 如果IP为空，则将其赋值为127.0.0.1
+    if (IP.isEmpty())
+        IP = QHostAddress(QHostAddress::LocalHost).toString();
+    return IP;
+}
+
+void
+MainWindow::on_connButtonWIFI_clicked() {
+    socketInit(ui->lineEditPort->text().toUInt());
+    ui->labelIP->setText(getLocalIP());
+}
+
+void
+MainWindow::on_disconnButtonWIFI_clicked() {
+    tcpServer->close();
+    ui->textBrowser_2->append("断开连接");
+    Sleep(1000);
+    ui->textBrowser_2->clear();
+}
+
+void
+MainWindow::PositionInit() {
+    ui->labelMap->setPixmap(QPixmap("./images/test.jpg"));
 }
 
